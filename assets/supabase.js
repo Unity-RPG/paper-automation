@@ -42,8 +42,8 @@
   function $(id) { return document.getElementById(id); }
 
   // ====== 配置（请替换为你的真实值） ======
-  var SUPABASE_URL = 'https://YOUR_PROJECT_REF.supabase.co';
-  var SUPABASE_KEY = 'YOUR_ANON_KEY';
+  var SUPABASE_URL = 'https://wyugalbmycckmzimagjy.supabase.co';
+  var SUPABASE_KEY = 'sb_publishable_K8TWSvMrsdKg_Knu5Zj2XA_dLNYFC8P';
   // ========================================
 
   var client = null;
