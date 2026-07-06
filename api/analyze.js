@@ -102,9 +102,9 @@ module.exports = async (req, res) => {
     let temp = temperature !== undefined ? temperature : 0.7;
     let maxTokens = max_tokens || 4000;
 
-    // 论文分析用更高 max_tokens
+    // 论文分析需要较大输出（含章节、图表、游戏等完整 JSON）
     if (type === 'analyze') {
-      maxTokens = 4000;
+      maxTokens = 8000;
       temp = 0.7;
     } else if (type === 'qa') {
       maxTokens = 1500;

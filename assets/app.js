@@ -356,7 +356,7 @@
           { role: 'user', content: '请分析以下论文文本并返回JSON结果：\n\n' + truncatedText }
         ],
         temperature: 0.7,
-        max_tokens: 4000
+        max_tokens: 8000
       });
     } else {
       // 后端代理模式（生产用）
@@ -367,7 +367,7 @@
           { role: 'user', content: '请分析以下论文文本并返回JSON结果：\n\n' + truncatedText }
         ],
         temperature: 0.7,
-        max_tokens: 4000
+        max_tokens: 8000
       });
     }
 
@@ -393,8 +393,39 @@
         jsonStr = jsonStr.replace(/```\s*/, '').replace(/```\s*$/, '');
       }
       jsonStr = jsonStr.trim();
-      return JSON.parse(jsonStr);
+      // 尝试直接解析
+      try {
+        return JSON.parse(jsonStr);
+      } catch (e) {
+        // 解析失败，尝试修复被截断的 JSON
+        return repairAndParseJson(jsonStr, e);
+      }
     });
+  }
+
+  // ==================== JSON 修复（应对 AI 返回被截断） ====================
+
+  function repairAndParseJson(jsonStr, originalError) {
+    try {
+      // 尝试补全缺失的右括号和引号
+      var repaired = jsonStr;
+      // 如果最后一个字符不是 } 或 ]，尝试截到最后一个完整元素后补全
+      var lastBrace = Math.max(repaired.lastIndexOf('}'), repaired.lastIndexOf(']'));
+      if (lastBrace > 0 && lastBrace < repaired.length - 1) {
+        repaired = repaired.substring(0, lastBrace + 1);
+      }
+      // 统计未闭合的括号
+      var openBraces = (repaired.match(/{/g) || []).length;
+      var closeBraces = (repaired.match(/}/g) || []).length;
+      var openBrackets = (repaired.match(/\[/g) || []).length;
+      var closeBrackets = (repaired.match(/\]/g) || []).length;
+      // 补全缺失的右括号
+      for (var i = 0; i < openBrackets - closeBrackets; i++) repaired += ']';
+      for (var i = 0; i < openBraces - closeBraces; i++) repaired += '}';
+      return JSON.parse(repaired);
+    } catch (e) {
+      throw new Error('AI 返回的 JSON 格式错误，可能内容过长被截断。请尝试上传较短的论文或使用 TXT 格式。原始错误: ' + (originalError.message || originalError));
+    }
   }
 
   // ==================== 文件大小限制 ====================
