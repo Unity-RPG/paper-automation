@@ -1,27 +1,8 @@
 {
-  "version": 2,
-  "name": "paper-automation",
-  "builds": [
+  "rewrites": [
     {
-      "src": "api/analyze.js",
-      "use": "@vercel/node"
-    },
-    {
-      "src": "paper-automation.html",
-      "use": "@vercel/static"
+      "source": "/api/:path*",
+      "destination": "/api/:path*"
     }
-  ],
-  "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "/api/$1"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/$1"
-    }
-  ],
-  "env": {
-    "DEEPSEEK_MODEL": "deepseek-chat"
-  }
+  ]
 }
