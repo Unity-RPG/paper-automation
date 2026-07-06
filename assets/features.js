@@ -6,6 +6,16 @@
   function $(id) { return document.getElementById(id); }
   function esc(t) { var d = document.createElement('div'); d.textContent = t || ''; return d.innerHTML; }
 
+  // ==================== 轻量提示 toast ====================
+  function showToast(msg) {
+    var t = document.createElement('div');
+    t.textContent = msg;
+    t.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1e293b;color:#fff;padding:12px 24px;border-radius:8px;font-size:14px;z-index:99999;box-shadow:0 4px 12px rgba(0,0,0,.15);max-width:90vw;';
+    document.body.appendChild(t);
+    setTimeout(function () { t.style.opacity = '0'; t.style.transition = 'opacity .3s'; }, 3000);
+    setTimeout(function () { if (t.parentNode) t.parentNode.removeChild(t); }, 3400);
+  }
+
   // ==================== 当前论文数据（由 app.js 设置） ====================
   var currentData = null;
   var currentPaperId = null;
@@ -294,8 +304,12 @@
     };
     if (isCloudMode()) {
       // 云端同步（失败时回退到本地，保证不丢数据）
-      window.PaperAuth.savePaper(entry).catch(function (e) {
+      window.PaperAuth.savePaper(entry).then(function () {
+        console.log('✅ 论文已保存到云端');
+        showToast('论文已同步到云端');
+      }).catch(function (e) {
         console.error('云端保存失败，回退到本地存储:', e);
+        showToast('云端保存失败: ' + (e.message || e) + '，已保存到本地');
         saveToLibraryLocal(entry);
       });
     } else {
