@@ -1,0 +1,7 @@
+_shared/fonts/
+_shared/js/echarts.min.js
+_shared/js/mermaid.min.js
+_shared/js/pdf.min.js
+_shared/js/pdf.worker.min.js
+node_modules/
+.vercel/
