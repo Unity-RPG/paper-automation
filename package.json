@@ -1,9 +1,5 @@
 {
   "name": "paper-automation",
   "version": "1.0.0",
-  "description": "论文自动化 · 智能解读与知识生成",
-  "private": true,
-  "engines": {
-    "node": ">=18.0.0"
-  }
+  "private": true
 }
