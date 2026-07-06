@@ -277,21 +277,37 @@
   });
 
   // ==================== 历史记录（论文库） ====================
+  // 登录用户优先使用 Supabase 云端同步；未登录则使用 localStorage（功能5）
+
+  function isCloudMode() {
+    return !!(window.PaperAuth && window.PaperAuth.isLoggedIn());
+  }
 
   function saveToLibrary(data) {
     if (!data || !data.paperInfo) return;
-    var lib = getLibrary();
-    // 去重：如果标题相同则更新
-    lib = lib.filter(function (item) {
-      return item.title !== data.paperInfo.title;
-    });
-    lib.unshift({
+    var entry = {
       id: currentPaperId,
       title: data.paperInfo.title,
       authors: data.paperInfo.authors,
       date: new Date().toLocaleDateString('zh-CN'),
       data: data
-    });
+    };
+    if (isCloudMode()) {
+      // 云端同步（失败时回退到本地，保证不丢数据）
+      window.PaperAuth.savePaper(entry).catch(function (e) {
+        console.error('云端保存失败，回退到本地存储:', e);
+        saveToLibraryLocal(entry);
+      });
+    } else {
+      saveToLibraryLocal(entry);
+    }
+  }
+
+  function saveToLibraryLocal(entry) {
+    var lib = getLibraryLocal();
+    // 去重：如果标题相同则更新
+    lib = lib.filter(function (item) { return item.title !== entry.title; });
+    lib.unshift(entry);
     // 最多保存 20 篇
     if (lib.length > 20) lib = lib.slice(0, 20);
     try {
@@ -303,26 +319,44 @@
     }
   }
 
-  function getLibrary() {
+  function getLibraryLocal() {
     try { return JSON.parse(localStorage.getItem('pa_library') || '[]'); }
     catch (e) { return []; }
   }
 
-  function renderLibrary() {
+  // 兼容旧调用：同步返回本地论文库
+  function getLibrary() { return getLibraryLocal(); }
+
+  // 登录时从 Supabase 加载，未登录时从 localStorage 加载
+  async function loadLibrary() {
+    if (isCloudMode()) {
+      try {
+        return await window.PaperAuth.loadPapers();
+      } catch (e) {
+        console.error('云端加载失败，回退到本地存储:', e);
+        return getLibraryLocal();
+      }
+    }
+    return getLibraryLocal();
+  }
+
+  async function renderLibrary() {
     var body = $('library-body');
-    var lib = getLibrary();
-    if (lib.length === 0) {
+    if (!body) return;
+    body.innerHTML = '<div class="lib-empty">加载中...</div>';
+    var lib = await loadLibrary();
+    if (!lib || lib.length === 0) {
       body.innerHTML = '<div class="lib-empty">还没有解析过的论文，上传一篇试试吧！</div>';
       return;
     }
     body.innerHTML = lib.map(function (item) {
-      return '<div class="lib-item" data-id="' + item.id + '">' +
+      return '<div class="lib-item" data-id="' + esc(item.id) + '">' +
         '<span class="lib-icon">📄</span>' +
         '<div class="lib-info">' +
         '<div class="lib-title">' + esc(item.title) + '</div>' +
         '<div class="lib-date">' + esc(item.authors) + ' · ' + esc(item.date) + '</div>' +
         '</div>' +
-        '<span class="lib-del" data-id="' + item.id + '">✕</span>' +
+        '<span class="lib-del" data-id="' + esc(item.id) + '">✕</span>' +
         '</div>';
     }).join('');
 
@@ -330,7 +364,6 @@
       el.addEventListener('click', function (e) {
         if (e.target.classList.contains('lib-del')) return;
         var id = el.getAttribute('data-id');
-        var lib = getLibrary();
         var item = lib.find(function (i) { return i.id === id; });
         if (item && item.data) {
           currentPaperId = item.id;
@@ -342,11 +375,16 @@
     });
 
     body.querySelectorAll('.lib-del').forEach(function (del) {
-      del.addEventListener('click', function (e) {
+      del.addEventListener('click', async function (e) {
         e.stopPropagation();
         var id = del.getAttribute('data-id');
-        var lib = getLibrary().filter(function (i) { return i.id !== id; });
-        localStorage.setItem('pa_library', JSON.stringify(lib));
+        if (isCloudMode()) {
+          try { await window.PaperAuth.deletePaper(id); }
+          catch (err) { console.error('云端删除失败:', err); }
+        } else {
+          var libLocal = getLibraryLocal().filter(function (i) { return i.id !== id; });
+          localStorage.setItem('pa_library', JSON.stringify(libLocal));
+        }
         renderLibrary();
       });
     });
@@ -377,6 +415,15 @@
     $('library-modal') && $('library-modal').addEventListener('click', function (e) {
       if (e.target === $('library-modal')) $('library-modal').classList.remove('open');
     });
+
+    // 登录/登出后，若论文库模态框处于打开状态则刷新列表（功能5）
+    if (window.PaperAuth && window.PaperAuth.onAuthChange) {
+      window.PaperAuth.onAuthChange(function () {
+        if ($('library-modal') && $('library-modal').classList.contains('open')) {
+          renderLibrary();
+        }
+      });
+    }
 
     // 分享模态框
     $('share-close') && $('share-close').addEventListener('click', function () {

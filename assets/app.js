@@ -397,6 +397,29 @@
     });
   }
 
+  // ==================== 文件大小限制 ====================
+  // PDF 文件限制 20MB，TXT 文件限制 5MB，超出则直接报错，避免无效上传与 AI 接口浪费
+  var MAX_PDF_SIZE = 20 * 1024 * 1024; // 20MB
+  var MAX_TXT_SIZE = 5 * 1024 * 1024;  // 5MB
+
+  function checkFileSize(file) {
+    if (!file) return null;
+    var isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+    var isTxt = file.type === 'text/plain' || file.name.toLowerCase().endsWith('.txt');
+    var sizeMB = (file.size / (1024 * 1024)).toFixed(2);
+    if (isPdf && file.size > MAX_PDF_SIZE) {
+      return '文件过大！PDF 文件限制为 20MB，当前文件大小为 ' + sizeMB + 'MB。请压缩 PDF 后重试，或上传 TXT 格式的论文。';
+    }
+    if (isTxt && file.size > MAX_TXT_SIZE) {
+      return '文件过大！TXT 文件限制为 5MB，当前文件大小为 ' + sizeMB + 'MB。请精简内容后重试。';
+    }
+    // 其它类型文件也做兜底限制（按 20MB）
+    if (!isPdf && !isTxt && file.size > MAX_PDF_SIZE) {
+      return '文件过大！当前文件大小为 ' + sizeMB + 'MB，已超出 20MB 上限。';
+    }
+    return null;
+  }
+
   // ==================== 处理流程 ====================
 
   async function processPaper(file) {
@@ -404,6 +427,22 @@
     $('proc-error').classList.remove('show');
     $('proc-title').textContent = '正在解析论文...';
     $('proc-subtitle').textContent = file ? file.name : 'Demo 模式';
+
+    // 文件大小限制检查（在真正开始解析前拦截）
+    if (file) {
+      var sizeErr = checkFileSize(file);
+      if (sizeErr) {
+        $('proc-error').textContent = sizeErr;
+        $('proc-error').classList.add('show');
+        $('proc-title').textContent = '文件过大';
+        $('proc-subtitle').textContent = '请选择更小的文件后重试';
+        // 重置所有步骤状态（避免显示进行中的假象）
+        ['extract', 'clean', 'understand', 'generate', 'games'].forEach(function (s) {
+          setProcStep(s, null);
+        });
+        return;
+      }
+    }
 
     // 重置步骤
     ['extract', 'clean', 'understand', 'generate', 'games'].forEach(function (s) {

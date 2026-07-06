@@ -6,6 +6,36 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>论文自动化 · 智能解读与知识生成</title>
 
+  <!-- ====== SEO 优化（功能2） ====== -->
+  <meta name="description" content="论文自动化是一个智能论文分析 Web 应用，支持上传 PDF/TXT 论文，自动生成论文摘要、章节导读、关键概念、原理小知识和互动小游戏，帮助你快速吃透论文内容。">
+  <meta name="keywords" content="论文分析,论文解读,AI论文,论文摘要,论文阅读,知识图谱,论文自动化,Transformer,学术研究,互动学习,深度学习,自然语言处理">
+  <meta name="author" content="论文自动化">
+  <meta name="robots" content="index, follow">
+  <!-- canonical：请替换为你部署后的正式域名 -->
+  <link rel="canonical" href="https://paper-automation.vercel.app/">
+
+  <!-- Open Graph（社交分享） -->
+  <meta property="og:title" content="论文自动化 · 智能解读与知识生成">
+  <meta property="og:description" content="上传论文，自动生成摘要、章节导读、关键概念、原理小知识和互动小游戏，帮你快速吃透论文。">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://paper-automation.vercel.app/">
+  <meta property="og:site_name" content="论文自动化">
+  <meta property="og:locale" content="zh_CN">
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="论文自动化 · 智能解读与知识生成">
+  <meta name="twitter:description" content="上传论文，自动生成摘要、章节导读、关键概念、原理小知识和互动小游戏，帮你快速吃透论文。">
+
+  <!-- ====== Umami 访问统计（功能3） ======
+       说明：请将下方 data-website-id 的 YOUR_WEBSITE_ID 替换为你的 Umami 网站 ID。
+       1. 访问 https://umami.is 注册 Umami 云账号（或在本地/服务器自部署 Umami）
+       2. 在 Umami 后台「Add Website」添加一个网站，记录得到的 Website ID
+       3. 将下方 YOUR_WEBSITE_ID 替换为该 ID
+       4. 若使用自部署版本，还需把 src 改为你自己的 Umami 脚本地址（如 https://your-umami.com/script.js）
+       未替换前该脚本仍会加载但不会产生有效统计，不影响页面功能。 -->
+  <script async defer src="https://analytics.umami.is/script.js" data-website-id="YOUR_WEBSITE_ID"></script>
+
   <style>
     @font-face {
       font-family: 'BricolageGrotesque';
@@ -1313,8 +1343,65 @@
       .match-grid { grid-template-columns: 1fr; }
       .paper-info { flex-direction: column; }
       .topbar { flex-direction: column; gap: 0.75rem; }
-      .qa-panel { width: calc(100vw - 2rem); right: 1rem; bottom: 4.5rem; }
+      .topbar-actions { flex-wrap: wrap; justify-content: center; }
       .qa-fab { bottom: 1rem; right: 1rem; }
+
+      /* ====== 移动端适配（功能4） ====== */
+      /* 操作栏纵向排列，按钮全宽 */
+      .action-bar {
+        flex-direction: column;
+        gap: 0.5rem;
+        padding: 0.75rem;
+      }
+      .action-bar .action-btn {
+        width: 100%;
+        justify-content: center;
+        padding: 0.6rem 0.85rem;
+      }
+
+      /* 问答面板全屏宽度 */
+      .qa-panel {
+        width: 100vw;
+        max-width: 100vw;
+        right: 0;
+        left: 0;
+        bottom: 4.5rem;
+        border-radius: 0;
+        height: calc(100vh - 5.5rem);
+        max-height: calc(100vh - 5.5rem);
+      }
+
+      /* 对比表格横向滚动提示 */
+      .compare-table-wrap { position: relative; }
+      .compare-table-wrap::before {
+        content: '👉 左右滑动查看完整对比表格';
+        display: block;
+        text-align: center;
+        font-size: 0.72rem;
+        color: var(--muted);
+        padding: 0.4rem 0.75rem;
+        background: var(--bg3);
+        border-bottom: 1px solid var(--rule);
+      }
+
+      /* 风格切换器在移动端换行 */
+      .style-switcher {
+        flex-wrap: wrap;
+        gap: 0.35rem;
+      }
+      .style-switcher .style-label { width: 100%; margin-bottom: 0.15rem; }
+
+      /* 进度条纵向排列 */
+      .progress-wrap {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.5rem;
+      }
+      .progress-label,
+      .progress-pct { text-align: center; }
+
+      /* 章节标签在移动端隐藏，节省空间 */
+      .chapter-header .chapter-tag { display: none; }
     }
   </style>
 </head>
@@ -1331,6 +1418,13 @@
         <span class="api-status no" id="api-status-badge">未配置 API</span>
         <button class="btn btn-ghost btn-sm" id="btn-library">📚 论文库</button>
         <button class="btn btn-ghost btn-sm" id="btn-new-paper" style="display:none;">上传新论文</button>
+        <!-- 用户系统（功能5） -->
+        <span id="user-area" style="display:none; align-items:center; gap:0.5rem;">
+          <span id="user-email" style="font-size:0.8rem; color:var(--muted);"></span>
+          <button class="btn btn-ghost btn-sm" id="btn-logout">登出</button>
+        </span>
+        <button class="btn btn-primary btn-sm" id="btn-login">登录</button>
+        <button class="btn btn-ghost btn-sm" id="btn-register">注册</button>
       </div>
     </div>
 
@@ -1615,6 +1709,35 @@
     </div>
   </div>
 
+  <!-- Auth Modal（功能5：登录/注册） -->
+  <div class="modal-overlay" id="auth-modal">
+    <div class="modal" style="max-width:420px;">
+      <div class="modal-header">
+        <h3 id="auth-modal-title">登录</h3>
+        <button class="qa-close" id="auth-close">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-row">
+          <label>邮箱</label>
+          <input type="email" id="auth-email" placeholder="you@example.com" autocomplete="email">
+        </div>
+        <div class="form-row">
+          <label>密码</label>
+          <input type="password" id="auth-password" placeholder="至少 6 位" minlength="6" autocomplete="current-password">
+        </div>
+        <div id="auth-error" style="display:none; color:var(--danger); font-size:0.82rem; margin-bottom:0.75rem; line-height:1.5;"></div>
+        <button class="btn btn-primary" id="auth-submit" style="width:100%; justify-content:center;">登录</button>
+        <div style="text-align:center; margin-top:0.75rem; font-size:0.82rem; color:var(--muted);">
+          <span id="auth-switch-text">还没有账号？</span>
+          <a href="#" id="auth-switch-link" style="color:var(--accent);">去注册</a>
+        </div>
+        <div style="margin-top:1rem; padding:0.6rem 0.75rem; background:var(--bg2); border-radius:var(--radius-sm); font-size:0.75rem; color:var(--muted); line-height:1.5;">
+          登录后论文库将自动云端同步，更换设备也能查看历史解析记录；未登录时论文库保存在本地浏览器。
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Compare Upload Input (hidden) -->
   <input type="file" id="compare-file-input" accept=".pdf,.txt" style="display:none;">
 
@@ -1622,10 +1745,13 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.4.3/echarts.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <!-- Supabase JS SDK（功能5：用户系统与云端同步） -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <!-- App logic -->
   <script src="./assets/app.js"></script>
   <script src="./assets/games.js"></script>
   <script src="./assets/features.js"></script>
+  <script src="./assets/supabase.js"></script>
   <script src="./assets/qa.js"></script>
   <script src="./assets/compare.js"></script>
   <script src="./assets/discovery.js"></script>
